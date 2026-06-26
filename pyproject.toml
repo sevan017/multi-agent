@@ -1,0 +1,57 @@
+# KamaClaude 项目配置（PEP 621 + Hatch 构建 + 常用工具链）
+
+# ---- PEP 517 ：声明如何构建 wheel/sdist---
+[build-system]
+requires = ["hatchling"]    # 构建时需要的后端包
+build-backend = "hatching.build" # 使用Hatching 作为后端构建
+
+# ----项目元数据与运行时依赖-------
+[project]
+name = "KamaClaude"
+version = "0.0.1"
+requires-python = ">=3.12,<3.13" # 仅支持 3.12 小版本范围， 与CI/类型检查一致
+dependencies = [
+    "pydantic>=2.0",             # 数据校验与序列化（含JSON模型）
+    "python-dotenv>=1.0"         # .env 文件解析
+]
+
+# 安装后可在PATH中执行的入口：`kama`/ `kama-core` / `kama-tui`
+[project.scripts]
+kama = "kama_claude.cli.main:main"
+kama-core = "kama_claude.core.app:run"
+kama-tui = "kama_claude.tui.__main:main"
+
+# ----hatch : 打wheel 时从src布局收录包 ----
+[tool.hatch.build.targets.wheel]
+packages = ["scr/kama_claude"]   # 源码在 src/kama_claude
+
+# ---- 开发期依赖 （PEP 735) -----
+[dependency-groups]
+dev = [
+    "ruff>=0.4",                 # 快速linter + import 排序等
+    "mypy>=1.10",                # 静态类型测试
+    "pytest>=8.0",               # 单元测试
+    "pytest-asyncio>=0.23",      # 异步测试支持
+]
+
+# ----- Ruff: 统一代码风格 ------
+[tool.ruff]
+src = ["src"]                    # 分析路径，便于识别第一方代码
+line-length = 100                # 行长上限
+target-version = "py312"         # 语法/规则 按 python 3.12
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"] # pycodestyle 错误、Pyflakes、isort、pyupgrade
+ignore = []
+
+# ------Mypy: 严格类型检查 -----
+[tool.mypy]
+python_version = "3.12"
+strict = true           # 启用严格模式
+mypy_path = "src"       # 将src加入模块搜索路径
+explict_package_bases = true # 明确包根目录，减少隐藏式命名空间误判
+
+# ----- Pytest : 默认发现 tests/. 异步用例自动管理 event loop ----
+[tool.pytest.ini_options]
+testpath = ["tests"]
+asyncio_mode = "auto"
